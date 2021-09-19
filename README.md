@@ -1,1 +1,1 @@
-# pokemon-showdown-enhanced-tooltip
+# Pokémon Showdown Enhancement Suite 
