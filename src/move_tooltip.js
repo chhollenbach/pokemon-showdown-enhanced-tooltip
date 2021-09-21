@@ -3,8 +3,7 @@ import {calculate, Generations, Pokemon as damageCalcPokemon, Move as damageCalc
 
 let enhanced_move_tooltip = {};
 
-// majority of this code is identical to code in https://github.com/smogon/pokemon-showdown-client, as we are going to overwrite
-// the method for the tooltip class
+// majority of this code is identical to code in https://github.com/smogon/pokemon-showdown-client, as we are going to overwrite the method for the tooltip class
 enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax, pokemon, serverPokemon, gmaxMove) {
     let text = '';
   
@@ -143,24 +142,24 @@ enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax,
     text += '<p>Accuracy: ' + accuracy + '</p>';
     if (zEffect) text += '<p>Z-Effect: ' + zEffect + '</p>';
     
-    /***************************/
-    /* Damage Calc Modification*/
-    /***************************/
+    /**********************************/
+    /* START Damage Calc Modification */
+    /**********************************/
 
     // Right now limiting scope to random battles, 1v1, non hardcore mode. Multiple opponents and variable EVs makes things much trickier
     if (move.category !== "Status" && this.battle.gameType === 'singles' && !this.battle.hardcoreMode && this.battle.id.includes("random")) {
       // TODO move all this logic to a separate function for ease of use
 
       // generation of battle
-      let gen = Generations.get(pokemon.side.battle.gen)
+      let gen = Generations.get(this.battle.gen)
 
       // determine dynamzing
       let player_dynamaxed = false
       let foe_dynamaxed = false
-      if (Object.keys(pokemon.volatiles).length > 0 && pokemon.volatiles.dynamax[0] === "dynamax") {
+      if ("dynamax" in pokemon.volatiles) {
         player_dynamaxed = true
       }
-      if (Object.keys(pokemon.side.foe.active[0].volatiles).length > 0 && pokemon.side.foe.active[0].volatiles.dynamax[0] === "dynamax") {
+      if ("dynamax" in pokemon.side.foe.active[0].volatiles) {
         foe_dynamaxed = true
       }
 
