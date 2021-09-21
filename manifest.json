@@ -20,9 +20,9 @@
         "matches": ["https://play.pokemonshowdown.com/*"]
     }],
     "icons": {
-        "16": "./images/icons/pokeball16.png",
-        "32": "./images/icons/pokeball32.png",
-        "48": "./images/icons/pokeball48.png",
-        "128": "./images/icons/pokeball128.png"
+        "16": "./images/icons/pokeball_16.png",
+        "32": "./images/icons/pokeball_32.png",
+        "48": "./images/icons/pokeball_48.png",
+        "128": "./images/icons/pokeball_128.png"
     }  
 }

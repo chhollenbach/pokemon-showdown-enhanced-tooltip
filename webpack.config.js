@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = {
   entry: {
-    enhancement_suite: './src/enhancement-suite.js'
+    enhancement_suite: './src/enhancement_suite.js'
   },
   output: {
     filename: '[name].bundle.js',
