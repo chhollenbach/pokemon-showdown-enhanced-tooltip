@@ -212,7 +212,7 @@ enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax,
         abilityOn: attackAbilityActive,
         gender: serverPokemon.gender
       }) 
-
+      
       // create defender
       let defendItem = ""
       let defendAbility = ""
@@ -284,7 +284,7 @@ enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax,
       // generate % ranges
       let low_end = 0
       let high_end = 0
-      if (result.damage.length === 1) {
+      if (result.damage === 0) {
         low_end = 0
         high_end = 0
       }
