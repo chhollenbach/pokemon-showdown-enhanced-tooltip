@@ -163,30 +163,71 @@ enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax,
         foe_dynamaxed = true
       }
 
-      //TODO implement abilities being active for more than just guts
-      let attackerGutsActive = false
+      // items and abilities must be title case and spaced
+      let attackItem = ""
+      let attackAbility = ""
+      if (serverPokemon.item) {attackItem = Dex.items.get(serverPokemon.item).name}
+      attackAbility = Dex.abilities.get(serverPokemon.ability).name
+
+      // determine if abilities are active - only care about abilities that affect damage
+      let attackAbilityActive = false
+      let defendAbilityActive = false
+      let gutsFlag = false
       if (serverPokemon.ability === "guts" && serverPokemon.status !== ""){
-        attackerGutsActive = true
+        attackAbilityActive = true
+        gutsFlag = true // seems to be a bug where guts isn't triggering increased attack in damage calc, using flag to add boost
       }
-      // create attacker and defender objects
+      // TODO - figure out better solution for defensive abilities
+      if (pokemon.side.foe.active[0].ability && pokemon.side.foe.active[0].ability === "multiscale" && pokemon.side.foe.active[0].hp === 100){
+        defendAbilityActive = true
+      }
+      let damageAbilities = ["Adaptability", "Aerilate", "Analytic", "Battery", "Battle Bond", "Dragon's Maw", "Galvanize", 
+                             "Gorilla Tactics", "Iron Fist", "Mega Launcher", "Normalize", "Pixilate", "Power Spot", "Punk Rock",
+                             "Reckless", "Refrigerate", "Rivalry", "Sand Force", "Sheer Force", "Stakeout", "Steelworker", "Steely Spirit", 
+                             "Strong Jaw", "Technician", "Tough Claws", "Toxic Boost", "Transistor", "Water Bubble"
+                            ]
+      if (attackAbility in damageAbilities) {
+        attackAbilityActive = true
+      }
+
+      // create attacker 
+      let attackerBoosts = {}
+      // bug with guts and damage calc package - not triggering increased attack
+      if (gutsFlag) {
+        if ('atk' in attackerBoosts) {
+          attackerBoosts = Object.assign(attackerBoosts, pokemon.boosts)
+          attackerBoosts.atk += 1
+        } else {
+          attackerBoosts.atk = 1
+        }
+      }
       let attacker = new damageCalcPokemon(gen, serverPokemon.name, {
-        item: serverPokemon.item, //TODO item here not showing up? need to investigate
+        item: attackItem, 
         nature: "Hardy", // Random batttle mons always have neutral nature
         evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-        boosts: pokemon.boosts,
-        ability: serverPokemon.ability,
+        boosts: attackerBoosts,
+        ability: attackAbility,
         level: serverPokemon.level,
         isDynamaxed: player_dynamaxed,
-        abilityOn: attackerGutsActive
+        abilityOn: attackAbilityActive,
+        gender: serverPokemon.gender
       }) 
+
+      // create defender
+      let defendItem = ""
+      let defendAbility = ""
+      if (pokemon.side.foe.active[0].item) {defendItem = Dex.items.get(pokemon.side.foe.active[0].item).name}
+      if (pokemon.side.foe.active[0].ability) {defendAbility = Dex.abilities.get(pokemon.side.foe.active[0].ability).name}
       let defender = new damageCalcPokemon(gen, pokemon.side.foe.active[0].name, {
-        item: pokemon.side.foe.active[0].item, //TODO item here not showing up? need to investigate
+        item: defendItem, //TODO item here not showing up? need to investigate
         nature: "Hardy", // Random batttle mons always have neutral nature
         evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
         boosts: pokemon.side.foe.active[0].boosts,
-        ability: pokemon.side.foe.active[0].ability,
+        ability: defendAbility,
         level: pokemon.side.foe.active[0].level,
-        isDynamaxed: foe_dynamaxed
+        isDynamaxed: foe_dynamaxed,
+        abilityOn: defendAbilityActive,
+        gender: pokemon.side.foe.active[0].gender
       }) 
 
       // create move object
@@ -241,8 +282,17 @@ enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax,
       )
       
       // generate % ranges
-      let low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
-      let high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
+      let low_end = 0
+      let high_end = 0
+      if (result.damage.length === 1) {
+        low_end = 0
+        high_end = 0
+      }
+      else {
+        low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
+        high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
+      }
+      
 
       text += '<p class="section"> Damage Range (per hit): ' + low_end + '% - ' + high_end + '%' + '</p>';
     }
