@@ -5,6 +5,10 @@
 import {calculate, Generations, Pokemon as damageCalcPokemon, Move as damageCalcMove, Field} from '@smogon/calc';
 
 function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, server_side_poke, move_object, battle_instance) {
+  // if pokemon involved in calc is fainted, return null
+    if (attacking_poke === null || defending_poke === null) {
+        return null
+    }
 
     // generation of battle
     let gen = Generations.get(battle_instance.gen)
@@ -25,51 +29,18 @@ function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, ser
     if (server_side_poke.item) {attackItem = Dex.items.get(server_side_poke.item).name}
     if (server_side_poke.ability) {attackAbility = Dex.abilities.get(server_side_poke.ability).name}
 
-    // determine if abilities are active - only care about abilities that affect damage
-    let attackAbilityActive = false
-    let defendAbilityActive = false
-    let gutsFlag = false
-    if (server_side_poke.ability === "guts" && server_side_poke.status !== ""){
-      attackAbilityActive = true
-      gutsFlag = true // seems to be a bug where guts isn't triggering increased attack in damage calc, using flag to add boost
-    }
-    // TODO - figure out better solution for defensive abilities
-    if (defending_poke.ability && defending_poke.ability === "multiscale" && defending_poke.hp === 100){
-      defendAbilityActive = true
-    }
-    let damageAbilities = ["Adaptability", "Aerilate", "Analytic", "Battery", "Battle Bond", "Dragon's Maw", "Galvanize", 
-                           "Gorilla Tactics", "Iron Fist", "Mega Launcher", "Normalize", "Pixilate", "Power Spot", "Punk Rock",
-                           "Reckless", "Refrigerate", "Rivalry", "Sand Force", "Sheer Force", "Stakeout", "Steelworker", "Steely Spirit", 
-                           "Strong Jaw", "Technician", "Tough Claws", "Toxic Boost", "Transistor", "Water Bubble"
-                          ]
-    if (attackAbility in damageAbilities) {
-      attackAbilityActive = true
-    }
-
-    // create attacker 
-    let attackerBoosts = {}
-    // bug with guts and damage calc package - not triggering increased attack
-    if (gutsFlag) {
-      if ('atk' in attackerBoosts) {
-        attackerBoosts = Object.assign(attackerBoosts, attacking_poke.boosts)
-        attackerBoosts.atk += 1
-      } else {
-        attackerBoosts.atk = 1
-      }
-    }  else {
-      attackerBoosts = Object.assign(attackerBoosts, attacking_poke.boosts)
-    }
     
-    let attacker = new damageCalcPokemon(gen, server_side_poke.name, {
+    let attacker = new damageCalcPokemon(gen, server_side_poke.speciesForme, {
       item: attackItem, 
       nature: "Hardy", // Random batttle mons always have neutral nature
       evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-      boosts: attackerBoosts,
+      boosts: attacking_poke.boosts,
       ability: attackAbility,
       level: server_side_poke.level,
       isDynamaxed: player_dynamaxed,
-      abilityOn: attackAbilityActive,
-      gender: server_side_poke.gender
+      abilityOn: true,
+      gender: server_side_poke.gender,
+      status: server_side_poke.status
     }) 
     
     // create defender
@@ -77,7 +48,7 @@ function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, ser
     let defendAbility = ""
     if (defending_poke.item.length > 0) {defendItem = Dex.items.get(defending_poke.item).name}
     if (defending_poke.ability.length > 0) {defendAbility = Dex.abilities.get(defending_poke.ability).name}
-    let defender = new damageCalcPokemon(gen, defending_poke.name, {
+    let defender = new damageCalcPokemon(gen, defending_poke.speciesForme, {
       item: defendItem, //TODO item here not showing up? need to investigate
       nature: "Hardy", // Random batttle mons always have neutral nature
       evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
@@ -85,12 +56,15 @@ function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, ser
       ability: defendAbility,
       level: defending_poke.level,
       isDynamaxed: foe_dynamaxed,
-      abilityOn: defendAbilityActive,
+      abilityOn: true,
       gender: defending_poke.gender
     }) 
-
+    
     // create move object
-    let calcMove = new damageCalcMove(gen, move_object.name)
+    let calcMove = new damageCalcMove(
+      gen, 
+      move_object.name
+    )
 
     // determine variables for field object
     let lightscreen = false
@@ -139,7 +113,7 @@ function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, ser
       calcMove,
       calcField
     )
-
+    
     return result
 }
 

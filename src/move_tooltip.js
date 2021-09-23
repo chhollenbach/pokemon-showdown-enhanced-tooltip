@@ -149,21 +149,22 @@ enhanced_move_tooltip.showMoveTooltip = function showMoveTooltip(move, isZOrMax,
     if (move.category !== "Status" && this.battle.gameType === 'singles' && !this.battle.hardcoreMode && this.battle.id.includes("random")) {
 
       let result = damage_calc_wrapper(pokemon, pokemon.side.foe.active[0], this.battle.farSide, serverPokemon, move, this.battle)
-      
-      // generate % ranges
-      let low_end = 0
-      let high_end = 0
-      if (result.damage === 0) {
-        low_end = 0
-        high_end = 0
+      // if a pokemon involved in  calc is fainted, result will be null
+      if (result !== null) {
+        // generate % ranges
+        let low_end = 0
+        let high_end = 0
+        if (result.damage === 0) {
+          low_end = 0
+          high_end = 0
+        }
+        else {
+          low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
+          high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
+        }
+        text += '<p class="section"> Damage Range (per hit): ' + low_end + '% - ' + high_end + '%' + '</p>';      
       }
-      else {
-        low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
-        high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
-      }
       
-
-      text += '<p class="section"> Damage Range (per hit): ' + low_end + '% - ' + high_end + '%' + '</p>';
     }
 
     /********************************/

@@ -148,21 +148,24 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
       if (move.category !== "Status" && this.battle.gameType === 'singles' && !this.battle.hardcoreMode && this.battle.id.includes("random")) {
 
         let result = damage_calc_wrapper(this.battle.mySide.active[0], this.battle.farSide.active[0], this.battle.farSide, serverPokemon, move, this.battle)
-        
-        // generate % ranges
-        let low_end = 0
-        let high_end = 0
-        if (result.damage === 0) {
-          low_end = 0
-          high_end = 0
+        // if a pokemon involved in  calc is fainted, result will be null
+        if (result === null) {
+          text += `${moveName}<br />`;
+        } else {
+          // generate % ranges
+          let low_end = 0
+          let high_end = 0
+          if (result.damage === 0) {
+            low_end = 0
+            high_end = 0
+          }
+          else {
+            low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
+            high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
+          }
+          text += `${moveName} ${low_end}% - ${high_end}% <br />`;
         }
-        else {
-          low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
-          high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
-        }
-        text += `${moveName} ${low_end}% - ${high_end}% <br />`;
       }
-
       else {
         text += `${moveName}<br />`;
       }
@@ -202,37 +205,40 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
           defender_side = this.battle.farSide
         }
         // if client and farside P# are different, attacker is clientPokemon, defender is far side
-        else if (clientPokemon.ident.slice(0,2) !== this.battle.farSide.active[0].ident.slice(0,2)) {
+        else if (this.battle.farSide.active[0] && clientPokemon.ident.slice(0,2) !== this.battle.farSide.active[0].ident.slice(0,2)) {
           server_poke = clientPokemon
           attacker_poke = clientPokemon
           defender_poke = this.battle.farSide.active[0]
           defender_side = this.battle.farSide
-          if (defender_poke === null) {break}
         }
         // if client and farside P# are same, attacker is clientPokemon, defender is myside
-        else if (clientPokemon.ident.slice(0,2) === this.battle.farSide.active[0].ident.slice(0,2)) {
+        else if (this.battle.farSide.active[0] && clientPokemon.ident.slice(0,2) === this.battle.farSide.active[0].ident.slice(0,2)) {
           server_poke = clientPokemon
           attacker_poke = clientPokemon
           defender_poke = this.battle.mySide.active[0]
           defender_side = this.battle.mySide
-          if (defender_poke === null) {break}
         }
 
         let result = damage_calc_wrapper(attacker_poke, defender_poke, defender_side, server_poke, row_move, this.battle)
+        // if a pokemon involved in  calc is fainted, result will be null
+        if (result === null) {
+          text += `${this.getPPUseText(row)} <br />`;
+        } else {
+          // generate % ranges
+          let low_end = 0
+          let high_end = 0
+          if (result.damage.length === 1) {
+            low_end = 0
+            high_end = 0
+          }
+          else {
+            low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
+            high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
+          }
+          
+          text += `${this.getPPUseText(row)} ${low_end}% - ${high_end}% <br />`;
+          }
 
-        // generate % ranges
-        let low_end = 0
-        let high_end = 0
-        if (result.damage.length === 1) {
-          low_end = 0
-          high_end = 0
-        }
-        else {
-          low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
-          high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
-        }
-        
-        text += `${this.getPPUseText(row)} ${low_end}% - ${high_end}% <br />`;
       }
       else {
         text += `${this.getPPUseText(row)} <br />`;
