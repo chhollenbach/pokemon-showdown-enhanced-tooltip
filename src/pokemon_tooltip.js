@@ -1,9 +1,8 @@
-// Damage Calculator import - see https://github.com/smogon/damage-calc for source code
-import {calculate, Generations, Pokemon as damageCalcPokemon, Move as damageCalcMove, Field} from '@smogon/calc';
+import damage_calc_wrapper from "./damage_calc_wrapper.js"
 
 let enhanced_pokemon_tooltip = {};
 
-// recreating this function because it's not working properly in pokemon prototype
+// majority of this code is identical to code in https://github.com/smogon/pokemon-showdown-client, as we are going to overwrite the method for the tooltip class
 function getHPText(pokemon, precision = 1) {
   if (pokemon.maxhp === 100) return pokemon.hp + '%';
   if (pokemon.maxhp !== 48) return (100 * pokemon.hp / pokemon.maxhp).toFixed(precision) + '%';
@@ -11,7 +10,6 @@ function getHPText(pokemon, precision = 1) {
   return Pokemon.getFormattedRange(range, precision, '–');
 }
 
-// majority of this code is identical to code in https://github.com/smogon/pokemon-showdown-client, as we are going to overwrite the method for the tooltip class
 enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(clientPokemon, serverPokemon, isActive, illusionIndex) {
   const pokemon = clientPokemon || serverPokemon;
   let text = '';
@@ -148,135 +146,8 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
       // if client pokemon is null, then attacker is server pokemon, defender is farSide
       // Right now limiting scope to random battles, 1v1, non hardcore mode. Multiple opponents and variable EVs makes things much trickier
       if (move.category !== "Status" && this.battle.gameType === 'singles' && !this.battle.hardcoreMode && this.battle.id.includes("random")) {
-        // TODO move all this logic to a separate function for ease of use
 
-        // generation of battle
-        let gen = Generations.get(this.battle.gen)
-
-        // determine dynamzing
-        let player_dynamaxed = false
-        let foe_dynamaxed = false
-        if ("dynamax" in this.battle.farSide.active[0].volatiles) {
-          foe_dynamaxed = true
-        }
-      
-        // items and abilities must be title case and spaced
-        let attackItem = ""
-        let attackAbility = ""
-        if (serverPokemon.item) {attackItem = Dex.items.get(serverPokemon.item).name}
-        attackAbility = Dex.abilities.get(serverPokemon.ability).name
-
-        // determine if abilities are active - only care about abilities that affect damage
-        let attackAbilityActive = false
-        let defendAbilityActive = false
-        let gutsFlag = false
-        if (serverPokemon.ability === "guts" && serverPokemon.status !== ""){
-          attackAbilityActive = true
-          gutsFlag = true // seems to be a bug where guts isn't triggering increased attack in damage calc, using flag to add boost
-        }
-        // TODO - figure out better solution for defensive abilities
-        if (this.battle.farSide.active[0].ability && this.battle.farSide.active[0].ability === "multiscale" && this.battle.farSide.active[0].hp === 100){
-          defendAbilityActive = true
-        }
-        let damageAbilities = ["Adaptability", "Aerilate", "Analytic", "Battery", "Battle Bond", "Dragon's Maw", "Galvanize", 
-                              "Gorilla Tactics", "Iron Fist", "Mega Launcher", "Normalize", "Pixilate", "Power Spot", "Punk Rock",
-                              "Reckless", "Refrigerate", "Rivalry", "Sand Force", "Sheer Force", "Stakeout", "Steelworker", "Steely Spirit", 
-                              "Strong Jaw", "Technician", "Tough Claws", "Toxic Boost", "Transistor", "Water Bubble"
-                              ]
-        if (attackAbility in damageAbilities) {
-          attackAbilityActive = true
-        }
-
-        // create attacker 
-        let attackerBoosts = {}
-        // bug with guts and damage calc package - not triggering increased attack
-        if (gutsFlag) {
-          if ('atk' in attackerBoosts) {
-            attackerBoosts = Object.assign(attackerBoosts, this.battle.mySide.active[0].boosts)
-            attackerBoosts.atk += 1
-          } else {
-            attackerBoosts.atk = 1
-          }
-        }
-        let attacker = new damageCalcPokemon(gen, serverPokemon.name, {
-          item: attackItem, 
-          nature: "Hardy", // Random batttle mons always have neutral nature
-          evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-          boosts: attackerBoosts,
-          ability: attackAbility,
-          level: serverPokemon.level,
-          isDynamaxed: player_dynamaxed,
-          abilityOn: attackAbilityActive,
-          gender: serverPokemon.gender
-        }) 
-
-        // create defender
-        let defendItem = ""
-        let defendAbility = ""
-        if (this.battle.farSide.active[0].item) {defendItem = Dex.items.get(this.battle.farSide.active[0].item).name}
-        if (this.battle.farSide.active[0].ability) {defendAbility = Dex.abilities.get(this.battle.farSide.active[0].ability).name}
-        let defender = new damageCalcPokemon(gen, this.battle.farSide.active[0].name, {
-          item: defendItem, //TODO item here not showing up? need to investigate
-          nature: "Hardy", // Random batttle mons always have neutral nature
-          evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-          boosts: this.battle.farSide.active[0].boosts,
-          ability: defendAbility,
-          level: this.battle.farSide.active[0].level,
-          isDynamaxed: foe_dynamaxed,
-          abilityOn: defendAbilityActive,
-          gender: this.battle.farSide.active[0].gender
-        }) 
-
-        // create move object
-        let calcMove = new damageCalcMove(gen, moveid)
-
-        // determine variables for field object
-        let lightscreen = false
-        if ("lightscreen" in this.battle.farSide.sideConditions){
-          lightscreen = true
-        }
-        let reflect = false
-        if ("reflect" in this.battle.farSide.sideConditions){
-          reflect = true
-        }
-        let aurora_veil = false
-        if ("auroraveil" in this.battle.farSide.sideConditions){
-          aurora_veil = true
-        }
-        let dark_aura = false
-        if (serverPokemon.ability === "darkaura"){
-          dark_aura = true
-        }
-        let fairy_aura = false
-        if (serverPokemon.ability === "fairyaura"){
-          fairy_aura = true
-        }
-        let battle_terrain = ""
-        if (this.battle.pseudoWeather.length > 0){
-          battle_terrain = this.battle.pseudoWeather[0][0]
-        }
-
-        // create field object
-        let calcField = new Field({
-          weather: this.battle.weather,
-          terrain: battle_terrain,
-          isDarkAura: dark_aura,
-          isFairyAura: fairy_aura,
-          defenderSide: {
-            isReflect: reflect,
-            isLightScreen: lightscreen,
-            isAuroraVeil: aurora_veil
-          }
-        })
-
-        // run damage calculation
-        let result = calculate(
-          gen,
-          attacker,
-          defender,
-          calcMove,
-          calcField
-        )
+        let result = damage_calc_wrapper(this.battle.mySide.active[0], this.battle.farSide.active[0], this.battle.farSide, serverPokemon, move, this.battle)
         
         // generate % ranges
         let low_end = 0
@@ -289,7 +160,7 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
           low_end = Math.round((result.damage[0] / result.defender.stats.hp) * 100)
           high_end = Math.round((result.damage[15] / result.defender.stats.hp) * 100)
         }
-        text += `${moveName} | ${low_end}% - ${high_end}% <br />`;
+        text += `${moveName} ${low_end}% - ${high_end}% <br />`;
       }
 
       else {
@@ -318,14 +189,13 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
 
       // Right now limiting scope to random battles, 1v1, non hardcore mode. Multiple opponents and variable EVs makes things much trickier
       if (row_move.category !== "Status" && this.battle.gameType === 'singles' && !this.battle.hardcoreMode && this.battle.id.includes("random")) {
-        // TODO move all this logic to a separate function for ease of use
-
+        
         let attacker_poke = null
         let defender_poke = null
         let defender_side = null
         let server_poke = null
         // if serverPokemon, attacker is serverPokemon, defender is far side
-        if (serverPokemon) {
+        if (server_poke) {
           server_poke = serverPokemon
           attacker_poke = this.battle.mySide.active[0]
           defender_poke = this.battle.farSide.active[0]
@@ -337,6 +207,7 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
           attacker_poke = clientPokemon
           defender_poke = this.battle.farSide.active[0]
           defender_side = this.battle.farSide
+          if (defender_poke === null) {break}
         }
         // if client and farside P# are same, attacker is clientPokemon, defender is myside
         else if (clientPokemon.ident.slice(0,2) === this.battle.farSide.active[0].ident.slice(0,2)) {
@@ -344,141 +215,11 @@ enhanced_pokemon_tooltip.showPokemonTooltip = function showPokemonTooltip(client
           attacker_poke = clientPokemon
           defender_poke = this.battle.mySide.active[0]
           defender_side = this.battle.mySide
+          if (defender_poke === null) {break}
         }
-  
-        // generation of battle
-        let gen = Generations.get(this.battle.gen)
-  
-        // determine dynamzing
-        let player_dynamaxed = false
-        let foe_dynamaxed = false
-        if ("dynamax" in attacker_poke.volatiles) {
-          player_dynamaxed = true
-        }
-        if ("dynamax" in defender_poke.volatiles) {
-          foe_dynamaxed = true
-        }
-  
-        // items and abilities must be title case and spaced
-        let attackItem = ""
-        let attackAbility = ""
-        if (server_poke.item) {attackItem = Dex.items.get(server_poke.item).name}
-        if (server_poke.ability) {attackAbility = Dex.abilities.get(server_poke.ability).name}
-  
-        // determine if abilities are active - only care about abilities that affect damage
-        let attackAbilityActive = false
-        let defendAbilityActive = false
-        let gutsFlag = false
-        if (server_poke.ability === "guts" && server_poke.status !== ""){
-          attackAbilityActive = true
-          gutsFlag = true // seems to be a bug where guts isn't triggering increased attack in damage calc, using flag to add boost
-        }
-        // TODO - figure out better solution for defensive abilities
-        if (defender_poke.ability && defender_poke.ability === "multiscale" && defender_poke.hp === 100){
-          defendAbilityActive = true
-        }
-        let damageAbilities = ["Adaptability", "Aerilate", "Analytic", "Battery", "Battle Bond", "Dragon's Maw", "Galvanize", 
-                               "Gorilla Tactics", "Iron Fist", "Mega Launcher", "Normalize", "Pixilate", "Power Spot", "Punk Rock",
-                               "Reckless", "Refrigerate", "Rivalry", "Sand Force", "Sheer Force", "Stakeout", "Steelworker", "Steely Spirit", 
-                               "Strong Jaw", "Technician", "Tough Claws", "Toxic Boost", "Transistor", "Water Bubble"
-                              ]
-        if (attackAbility in damageAbilities) {
-          attackAbilityActive = true
-        }
-  
-        // create attacker 
-        let attackerBoosts = {}
-        // bug with guts and damage calc package - not triggering increased attack
-        if (gutsFlag) {
-          if ('atk' in attackerBoosts) {
-            attackerBoosts = Object.assign(attackerBoosts, attacker_poke.boosts)
-            attackerBoosts.atk += 1
-          } else {
-            attackerBoosts.atk = 1
-          }
-        }
-        let attacker = new damageCalcPokemon(gen, server_poke.name, {
-          item: attackItem, 
-          nature: "Hardy", // Random batttle mons always have neutral nature
-          evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-          boosts: attackerBoosts,
-          ability: attackAbility,
-          level: server_poke.level,
-          isDynamaxed: player_dynamaxed,
-          abilityOn: attackAbilityActive,
-          gender: server_poke.gender
-        }) 
-        
-        // create defender
-        let defendItem = ""
-        let defendAbility = ""
-        if (defender_poke.item.length > 0) {defendItem = Dex.items.get(defender_poke.item).name}
-        if (defender_poke.ability.length > 0) {defendAbility = Dex.abilities.get(defender_poke.ability).name}
-        let defender = new damageCalcPokemon(gen, defender_poke.name, {
-          item: defendItem, //TODO item here not showing up? need to investigate
-          nature: "Hardy", // Random batttle mons always have neutral nature
-          evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-          boosts: defender_poke.boosts,
-          ability: defendAbility,
-          level: defender_poke.level,
-          isDynamaxed: foe_dynamaxed,
-          abilityOn: defendAbilityActive,
-          gender: defender_poke.gender
-        }) 
-  
-        // create move object
-        let calcMove = new damageCalcMove(gen, row[0])
-  
-        // determine variables for field object
-        let lightscreen = false
-        if ("lightscreen" in defender_side.sideConditions){
-          lightscreen = true
-        }
-        let reflect = false
-        if ("reflect" in defender_side.sideConditions){
-          reflect = true
-        }
-        let aurora_veil = false
-        if ("auroraveil" in defender_side.sideConditions){
-          aurora_veil = true
-        }
-        let dark_aura = false
-        if (server_poke.ability === "darkaura"){
-          dark_aura = true
-        }
-        let fairy_aura = false
-        if (server_poke.ability === "fairyaura"){
-          fairy_aura = true
-        }
-        let battle_terrain = ""
-        if (this.battle.pseudoWeather.length > 0){
-          battle_terrain = this.battle.pseudoWeather[0][0]
-        }
-  
-        // create field object
-        let calcField = new Field({
-          weather: this.battle.weather,
-          terrain: battle_terrain,
-          isDarkAura: dark_aura,
-          isFairyAura: fairy_aura,
-          defenderSide: {
-            isReflect: reflect,
-            isLightScreen: lightscreen,
-            isAuroraVeil: aurora_veil
-          }
-        })
-  
-        // run damage calculation
-        let result = calculate(
-          gen,
-          attacker,
-          defender,
-          calcMove,
-          calcField
-        )
 
+        let result = damage_calc_wrapper(attacker_poke, defender_poke, defender_side, server_poke, row_move, this.battle)
 
-        
         // generate % ranges
         let low_end = 0
         let high_end = 0
