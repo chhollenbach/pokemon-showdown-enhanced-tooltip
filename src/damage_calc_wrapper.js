@@ -9,7 +9,7 @@ function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, ser
     if (attacking_poke === null || defending_poke === null) {
         return null
     }
-
+    
     // generation of battle
     let gen = Generations.get(battle_instance.gen)
 
@@ -30,11 +30,17 @@ function damage_calc_wrapper(attacking_poke, defending_poke, defending_side, ser
     if (server_side_poke.ability) {attackAbility = Dex.abilities.get(server_side_poke.ability).name}
 
     
+    // only apply boosts if hovering over active pokemon
+    let boosts = {}
+    if (server_side_poke.ident === attacking_poke.ident) {
+      boosts = attacking_poke.boosts
+    }
+
     let attacker = new damageCalcPokemon(gen, server_side_poke.speciesForme, {
       item: attackItem, 
       nature: "Hardy", // Random batttle mons always have neutral nature
       evs: {hp: 85, spd: 85, def: 85, atk: 85, spa: 85, spe: 85}, // random battle mons always have 85, except for rare situations // TODO logic for edge cases
-      boosts: attacking_poke.boosts,
+      boosts: boosts,
       ability: attackAbility,
       level: server_side_poke.level,
       isDynamaxed: player_dynamaxed,
