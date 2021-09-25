@@ -1,7 +1,7 @@
 {
     "name": "Pokémon Showdown Enhancement Suite",
     "description": "Enhancement Suite for Pokemon Showdown",
-    "version": "0.1",
+    "version": "0.1.1",
     "manifest_version": 3,
     "content_scripts":[
         {
