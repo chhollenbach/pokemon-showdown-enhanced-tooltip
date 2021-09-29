@@ -26,5 +26,6 @@ The code for the extension can be found under `./src`. Webpack is used to bundle
 # Change Log
 ### September 2021
 App submitted for review in google web store. Development continues for more features/bug fixes.
+
 Link to (unlisted) app: https://chrome.google.com/webstore/detail/pok%C3%A9mon-showdown-enhancem/lkbioopgejalagiohoodinonejedmbof
 
